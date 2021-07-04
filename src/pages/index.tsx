@@ -1,9 +1,19 @@
+import { GetStaticProps } from 'next'
 import Head from 'next/head'
 import { SubscribeButton } from '../components/SubscribeButton'
+import { stripe } from '../services/stripe'
+import Image from 'next/image'
+import avatarImg from '../../public/images/avatar.svg'
 import styles from './index.module.scss'
 
+interface HomeProps {
+  product: {
+    priceId: string;
+    amount: number;
+  }
+}
 
-export default function Home() {
+export default function Home({product}: HomeProps) {
   return (
     <>
       <Head>
@@ -15,12 +25,38 @@ export default function Home() {
           <h1>News about the <span>React</span> world.</h1>
           <p>
             Get access to all publication <br /> 
-            <span>for $9.90 month</span>
+            <span>for {product.amount} month</span>
           </p>
-          <SubscribeButton/>
+          <SubscribeButton priceId={product.priceId}/>
         </section>
-        <img src="/images/avatar.svg" alt="Girl coding" />
+        <Image src={avatarImg} alt="Girl coding" />
       </main>
     </>
   )
+}
+
+//getStaticProps - SSG - Páginas onde o conteúdo é o mesmo para todos usuários da aplicação
+//getServerSideProps - SSR - Páginas dinâmicas
+//Se não tem necessidade de indexação pelo google, na maioria das vezes, é recomendado chamar a API do modo tradicional
+// Client-side
+// Server-side
+// Static-side
+
+export const getStaticProps: GetStaticProps = async () => {
+  const price  = await stripe.prices.retrieve('price_1J9I6sC0fa7iCkDeV1f3SRDw')
+  const product = {
+    priceId: price.id,
+    amount: new Intl.NumberFormat('en-US',{
+      style:'currency',
+      currency: 'USD',
+
+    }).format(price.unit_amount / 100)
+  };
+  return {
+    props: {
+      product,
+    },
+    revalidate: 60 * 60 * 24, //24 hours
+  }
+
 }
